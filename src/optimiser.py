@@ -15,47 +15,6 @@ class Optimiser:
     """"
     Optimiser class for fitting symbolic equations to data using gradient
     descent with JAX.
-
-    This class is designed to optimise the values of symbolic constants (e.g.,
-    c0, c1, ...)
-    in a SymPy expression, given observed variable arrays and target values.
-    It leverages JAX for efficient automatic differentiation and numerical
-    computation.
-
-    Attributes:
-        var_values (Dict[str, jnp.ndarray]): Dictionary mapping variable names
-        (excluding constants)
-            to their corresponding JAX arrays.
-        y (jnp.ndarray): Target values to fit the model to.
-        lr (float): Learning rate for gradient descent (default: 1e-2).
-
-    Methods:
-        loss_fn(pred, target):
-            Computes the mean squared error (MSE) loss between predictions and
-              targets.
-
-        _extract_constants_and_variables(equation):
-            Splits the free symbols in a SymPy equation into constants (c0,
-            c1, ...) and variables.
-
-        _build_model_fn(equation, constants, variables):
-            Constructs a JAX-compatible callable model function from a SymPy
-            expression, taking parameters and variable arrays as input.
-
-        optimise(equation, iterations, init_params=None, verbose=False):
-            Performs gradient descent to fit the constants in the given
-            equation to the data. Returns the best loss and a dictionary
-            mapping constant names to their optimised values.
-
-    Usage:
-        1. Instantiate the Optimiser with variable arrays and target values.
-        2. Call the `optimise` method with a SymPy equation and desired number
-        of iterations.
-        3. Retrieve the optimised constants and final loss.
-
-    Example:
-        optimiser = Optimiser(var_values, target_values)
-        best_loss, params = optimiser.optimise(equation, iterations=1000)
     """
 
     def __init__(
