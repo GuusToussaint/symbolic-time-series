@@ -190,27 +190,3 @@ class Optimiser:
             for i, c in enumerate(constants)
         }
         return best_loss, result_dict
-
-
-if __name__ == "__main__":
-    x = jnp.linspace(0, 2 * jnp.pi, 1000)
-    true_c0, true_c1 = 1.7, -0.25
-    y = (
-        (true_c0 * x)
-        + true_c1
-        + 0.05 * jax.random.normal(jax.random.PRNGKey(0), (x.size,))
-    )
-
-    # Build sympy equation
-    x_sym = sp.Symbol("x")
-    c0, c1 = sp.symbols("c0 c1")
-    test_equation = (c0 * x_sym) + c1
-
-    opt = Optimiser(
-        var_values={"x": x},
-        target_values=y,
-        lr=5e-2,
-    )
-    result = opt.optimise(test_equation, iterations=1000, verbose=True)
-
-    print(result)  # ~ {'c0': 1.7..., 'c1': -0.25...}
