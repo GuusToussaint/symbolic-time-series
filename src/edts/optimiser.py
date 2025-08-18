@@ -22,10 +22,12 @@ class Optimiser:
         var_values: Dict[str, jnp.ndarray],
         target_values: jnp.ndarray,
         lr: float = 1e-2,
+        l2_weight: float = 1e-2,  # Add a regularization weight argument
     ):
         self.var_values = var_values
         self.y = target_values
         self.lr = lr
+        self.l2_weight = l2_weight
 
     @staticmethod
     def loss_fn(pred, target):
@@ -159,7 +161,9 @@ class Optimiser:
         # 6) Define objective(param_vector) -> scalar
         def objective(params: jnp.ndarray) -> jnp.ndarray:
             pred = model_fn(params, self.var_values)
-            return self.loss_fn(pred, self.y)
+            mse_loss = self.loss_fn(pred, self.y)
+            l2_reg = self.l2_weight * jnp.sum(params ** 2)
+            return mse_loss + l2_reg
 
         # 7) JIT + grad
         grad_objective = jax.jit(jax.grad(objective))
@@ -170,7 +174,13 @@ class Optimiser:
         best_loss = jnp.inf
         for it in range(int(iterations)):
             g = grad_objective(params)
+            max_norm = 1.0
+            grad_norm = jnp.linalg.norm(g)
+            if grad_norm > max_norm:
+                g = g * (max_norm / grad_norm)
             params = params - lr * g
+
+            print(params)
 
             current_loss = objective_jit(params)
             if current_loss < best_loss:
