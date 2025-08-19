@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import jax.numpy as jnp
 import sympy as sp
-from optimiser import Optimiser
+from edts.optimiser import Optimiser
 
 
 class EDTS:
