@@ -1,0 +1,364 @@
+<h1 id="symbolic-time-series">symbolic-time-series</h1>
+<h2 id="search-strategy">Search strategy</h2>
+<h3 id="notation">Notation</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Shape</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline"><em>n</em></span></td>
+<td><span class="math inline">1</span></td>
+<td>The number of building blocks</td>
+</tr>
+<tr>
+<td><span class="math inline"><em>k</em></span></td>
+<td><span class="math inline">1</span></td>
+<td>The beam width</td>
+</tr>
+<tr>
+<td><span class="math inline"><em>b</em></span></td>
+<td><span class="math inline">1</span></td>
+<td>The number of beams</td>
+</tr>
+<tr>
+<td><span class="math inline"><em>s</em></span></td>
+<td><span class="math inline">1</span></td>
+<td>The number of predefined useful combinations</td>
+</tr>
+<tr>
+<td><span class="math inline"><strong>F</strong></span></td>
+<td><span class="math inline">1 × <em>n</em></span></td>
+<td>The matrix representing the building blocks.</td>
+</tr>
+<tr>
+<td><span class="math inline"><em>Λ</em></span></td>
+<td><span
+class="math inline">2<sup><em>n</em></sup> × <em>n</em></span></td>
+<td>The total number of potential equations.</td>
+</tr>
+<tr>
+<td><span
+class="math inline"><strong>B</strong><sub><em>i</em></sub></span></td>
+<td><span
+class="math inline"><em>b</em><em>k</em><em>n</em> × <em>n</em></span></td>
+<td>The potential equations at depth <span
+class="math inline"><em>i</em></span>, note that the shape represents an
+upper bound and is usually smaller due to duplicates.</td>
+</tr>
+<tr>
+<td><span class="math inline"><em>l</em></span></td>
+<td><span class="math inline"><em>k</em></span></td>
+<td>A vector of size <span class="math inline"><em>k</em></span> which
+holds the indexes of the rows of <span
+class="math inline"><strong>B</strong><sub><em>i</em></sub></span> which
+produce the lowest losses.</td>
+</tr>
+<tr>
+<td><span
+class="math inline"><strong>B</strong><sub><em>i</em></sub><sup><em>l</em></sup></span></td>
+<td><span class="math inline"><em>k</em> × <em>n</em></span></td>
+<td>A subset of <span
+class="math inline"><strong>B</strong><sub><em>i</em></sub></span>
+containing only the rows denoted in <span
+class="math inline"><em>l</em></span>.</td>
+</tr>
+<tr>
+<td><span class="math inline"><strong>S</strong></span></td>
+<td><span class="math inline"><em>s</em> × <em>n</em></span></td>
+<td>A matrix containing predefined useful combination of building
+blocks.</td>
+</tr>
+<tr>
+<td><span class="math inline"><strong>I</strong></span></td>
+<td><span class="math inline"><em>n</em> × <em>n</em></span></td>
+<td>Identity matrix.</td>
+</tr>
+<tr>
+<td><span class="math inline"><strong>I</strong><sup>′</sup></span></td>
+<td><span
+class="math inline">(<em>n</em> + <em>s</em>) × <em>n</em></span></td>
+<td><span
+class="math inline">$\begin{bmatrix}\mathbf{I}\\\\\mathbf{S}\end{bmatrix}$</span></td>
+</tr>
+<tr>
+<td><span class="math inline">⊘</span></td>
+<td>None</td>
+<td>This denotes a special operation between two matrices <span
+class="math inline"><strong>X</strong><sub>1</sub></span> and <span
+class="math inline"><strong>X</strong><sub>2</sub></span>, which are
+required to have the same shape in dimension 1. It represents:<br><span
+class="math inline">$\mathbf{X}_1\oslash\mathbf{X}_2=\begin{bmatrix}\mathbf{X}_1^0\mid\mathbf{X}_2\\\\\dots\\\\\mathbf{X}_1^n\mid\mathbf{X}_2\end{bmatrix}$</span></td>
+</tr>
+</tbody>
+</table>
+<h3 id="beam-search">Beam search</h3>
+<p>The matrix of potential equations at depth <span
+class="math inline"><em>d</em></span> can be defined as follows:</p>
+<p><span class="math display">$$
+    \mathbf{B}_{d}=
+    \begin{cases}
+      \mathbf{I}', &amp; \text{if}\ d=0 \\
+      \mathbf{B}_{d-1}^{\argmin_k(\mathcal{L}(\mathbf{B}_{d-1} \times
+\mathbf{F}))} \oslash \mathbf{I}', &amp; \text{otherwise}
+    \end{cases}
+$$</span></p>
+<p>To illustrate to the process of calculating the matrix <span
+class="math inline"><strong>B</strong><sub><em>d</em></sub></span>
+consider the following example: <span
+class="math display"><em>k</em> = 2</span></p>
+<p><span class="math display">$$
+\mathbf{S}=\begin{bmatrix}
+    0 &amp; 0 &amp; 1 &amp; 1 &amp; 0 &amp; 0
+\end{bmatrix}
+$$</span></p>
+<p><span class="math display">$$
+\mathbf{F}=\begin{bmatrix}
+    x_1 &amp; x_2 &amp; x_1^2 &amp; x_2^2 &amp; e^{x_1} &amp; e^{x_2} \\
+\end{bmatrix}
+$$</span></p>
+<p>As stated in Equation~ <span
+class="math inline"><strong>B</strong><sub>0</sub></span> is defined as
+follows:</p>
+<p><span class="math display">$$
+\mathbf{B}_0=\mathbf{I}'=
+\begin{bmatrix}
+    \mathbf{I}\\
+    \mathbf{S}
+\end{bmatrix}=
+\begin{bmatrix}
+    1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\
+    0 &amp; 0 &amp; 1 &amp; 1 &amp; 0 &amp; 0
+\end{bmatrix}
+$$</span></p>
+<p>To calculate <span
+class="math inline"><strong>B</strong><sub>1</sub></span>, the losses
+for all potential equations in <span
+class="math inline"><strong>B</strong><sub>0</sub></span> need to be
+calculated. Which is done as follows: <span class="math display">$$
+\mathcal{L}(\mathbf{B}_0 \times \mathbf{F})=\mathcal{L}(
+\begin{bmatrix}
+    1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\
+    0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\
+    0 &amp; 0 &amp; 1 &amp; 1 &amp; 0 &amp; 0
+\end{bmatrix} \times
+\begin{bmatrix}
+    x_1 &amp; x_2 &amp; x_1^2 &amp; x_2^2 &amp; e^{x_1} &amp; e^{x_2} \\
+\end{bmatrix}
+)=
+\mathcal{L}(
+\begin{bmatrix}
+    x_1 \\
+    x_2 \\
+    x_1^2\\
+    x_2^2 \\
+    e^{x_1} \\
+    e^{x_2} \\
+    x_1^2 + x_2^2
+\end{bmatrix}
+)=
+\begin{bmatrix}
+    0.25 \\
+    0.45 \\
+    0.10 \\
+    0.45 \\
+    0.67 \\
+    0.50 \\
+    0.45
+\end{bmatrix}
+$$</span></p>
+<p>Then, the indexes for the <span class="math inline"><em>k</em></span>
+smallest losses of <span
+class="math inline"><strong>B</strong><sub>0</sub></span> are
+calculated. Subsequently, the rows from <span
+class="math inline"><strong>B</strong><sub>0</sub></span> are selected.
+<span class="math display">$$
+l=\argmin_k(\mathcal{L}(\mathbf{B}_0 \times \mathbf{F}))=\begin{bmatrix}
+    0 &amp; 2
+\end{bmatrix}
+$$</span></p>
+<p><span class="math display">$$
+\mathbf{B}_0^{\argmin_k(\mathcal{L}(\mathbf{B}_0 \times \mathbf{F}))}=
+\mathbf{B}_0^{l}=
+\begin{bmatrix}
+    1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+    0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0
+\end{bmatrix}
+$$</span></p>
+Finally <span class="math inline"><strong>B</strong><sub>1</sub></span>
+can be calculated: $$ _1=_0^{l} ’=
+
+=
+<p>$$</p>
+<h2 id="extention-to-time-series-forecasting">Extention to time series
+forecasting</h2>
+<p>The base case deals with the classical regression task. While any
+time series forecasting task can be translated into a classic regression
+task by treating the input time series as a feature vector, we lose the
+additional information encoded in the data. Therefore we propose the
+following components to encode the time dependent features in the
+equation discovery framework.</p>
+<p>We require the following attributes: - <span
+class="math inline"><em>Δ</em><sup>−</sup></span>, which denotes the
+maximum of historical time points the system is allowed to use. - <span
+class="math inline"><em>Δ</em><sup>+</sup></span>, which denotes the
+target for the prediction.</p>
+<p>The task of equation discovery for time series forcasting than
+becomes the following: <span class="math display">$$
+f^* \in \argmin\limits_{f \in \Lambda} g(f(X_{features,\Delta^-}),
+Y_{target,\Delta^+})
+$$</span> Where: - <span class="math inline"><em>Λ</em></span>, defines
+the complete search space of possible equations. - <span
+class="math inline"><em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, <em>Δ</em><sup>−</sup></sub></span>,
+defines the matrix of input features, with a maximum historic horizon of
+<span class="math inline"><em>Δ</em><sup>−</sup></span>. - <span
+class="math inline"><em>Y</em><sub><em>t</em><em>a</em><em>r</em><em>g</em><em>e</em><em>t</em>, <em>Δ</em><sup>+</sup></sub></span>,
+defines the vector of target values for the feature <span
+class="math inline"><em>t</em><em>a</em><em>r</em><em>g</em><em>e</em><em>t</em></span>
+at time point <span class="math inline"><em>Δ</em><sup>+</sup></span>. -
+<span class="math inline"><em>g</em></span>, defines the loss function.
+- <span class="math inline"><em>f</em></span>, defines a function in the
+search space <span class="math inline"><em>Λ</em></span>. - <span
+class="math inline"><em>f</em><sup>*</sup></span>, defines the equation
+<span class="math inline"><em>f</em></span> in <span
+class="math inline"><em>Λ</em></span> that minimises <span
+class="math inline"><em>g</em></span> for <span
+class="math inline"><em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, <em>Δ</em><sup>−</sup></sub></span>
+and <span
+class="math inline"><em>Y</em><sub><em>t</em><em>a</em><em>r</em><em>g</em><em>e</em><em>t</em>, <em>Δ</em><sup>+</sup></sub></span>.</p>
+<h3 id="example-case">Example case</h3>
+<p>Imagine we have a dataset of a cycling athlete containing two
+features: heart rate (bpm), and power (watts).</p>
+<table>
+<thead>
+<tr>
+<th>Time (t)</th>
+<th>Heart Rate (bpm)</th>
+<th>Power (W)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>110</td>
+<td>120</td>
+</tr>
+<tr>
+<td>2</td>
+<td>118</td>
+<td>150</td>
+</tr>
+<tr>
+<td>3</td>
+<td>128</td>
+<td>190</td>
+</tr>
+<tr>
+<td>4</td>
+<td>138</td>
+<td>220</td>
+</tr>
+<tr>
+<td>5</td>
+<td>150</td>
+<td>250</td>
+</tr>
+<tr>
+<td>6</td>
+<td>158</td>
+<td>260</td>
+</tr>
+<tr>
+<td>7</td>
+<td>160</td>
+<td>200</td>
+</tr>
+<tr>
+<td>8</td>
+<td>156</td>
+<td>160</td>
+</tr>
+<tr>
+<td>9</td>
+<td>150</td>
+<td>140</td>
+</tr>
+<tr>
+<td>10</td>
+<td>145</td>
+<td>130</td>
+</tr>
+</tbody>
+</table>
+<p>The task is to predict the power output at time <span
+class="math inline"><em>t</em> = 11</span> based on the previous values
+of heart rate and power. To achieve this, we can define the following
+parameters: - <span class="math inline"><em>Δ</em><sup>−</sup></span> =
+3, meaning we can use the last 3 time points - <span
+class="math inline"><em>Δ</em><sup>+</sup></span> = 1, meaning we want
+to predict the power output at time <span
+class="math inline"><em>t</em> = 11</span>.</p>
+<p>The input feature matrix for <span
+class="math inline"><em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, 3</sub><sup>8</sup></span>
+would look like this: <span class="math display">$$
+X_{features,8} =
+\begin{bmatrix}
+    150 &amp; 250 \\
+    158 &amp; 260 \\
+    160 &amp; 200 \\
+\end{bmatrix}
+$$</span> The target vector for <span
+class="math inline"><em>Y</em><sub><em>t</em><em>a</em><em>r</em><em>g</em><em>e</em><em>t</em>, 1</sub><sup>8</sup></span>
+would look like this: <span class="math display">$$
+Y_{target,1}^8 =
+\begin{bmatrix}
+    156 \\
+\end{bmatrix}
+$$</span></p>
+<p>In total we have 8 training samples, which can be used to train the
+equation discovery system. With the goal of finding an equation that
+using <span
+class="math inline"><em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, 3</sub><sup>11</sup></span>
+predicts <span
+class="math inline"><em>Y</em><sub><em>t</em><em>a</em><em>r</em><em>g</em><em>e</em><em>t</em>, 1</sub><sup>11</sup></span>.
+With the following input feature matrix: <span class="math display">$$
+X_{features,3}^{11} =
+\begin{bmatrix}
+    160 &amp; 200 \\
+    156 &amp; 160 \\
+    150 &amp; 140 \\
+\end{bmatrix}
+$$</span></p>
+<h4 id="convential-regression">Convential regression</h4>
+<p>If you would approach this task from a conventional regression
+perspective, you would change the input feature matrix into a vector of
+features. <span class="math display">$$
+X_{features,3}^{11} = X_t =
+\begin{bmatrix}
+    160 &amp; 200 &amp; 156 &amp; 160 &amp; 150 &amp; 140 \\
+\end{bmatrix}
+$$</span></p>
+<p>A potential equation could be: <span
+class="math display"><em>f</em>(<em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, 3</sub><sup>11</sup>) = 0.7 ⋅ <em>X</em><sub><em>f</em></sub><sup>4</sup> + 0.1 ⋅ <em>X</em><sub><em>f</em></sub><sup>5</sup> + 10</span>
+<span
+class="math display"><em>f</em>(<em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, 3</sub><sup>11</sup>) = 0.7 ⋅ 200<sup>4</sup> + 0.1 ⋅ 140<sup>5</sup> + 10</span>
+<span
+class="math display"><em>f</em>(<em>X</em><sub><em>f</em><em>e</em><em>a</em><em>t</em><em>u</em><em>r</em><em>e</em><em>s</em>, 3</sub><sup>11</sup>) = 156</span></p>
