@@ -259,6 +259,10 @@ $$
 f(X_t) = 156
 $$
 
+#### Time series regression
 
+Though this equation is able to predict the target value, it does not take into account the time dependency of the features.
+To get a better predictive model we should take into account the previous values of the features.
+One approach to achieve this is to use an exponetial decay function to weight the previous values of the features.
 
 
