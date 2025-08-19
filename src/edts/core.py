@@ -1,32 +1,42 @@
+"""EDTS - Equation Discovery for Time Series"""
+import itertools
+import concurrent.futures
 import logging
 import pandas as pd
 import numpy as np
+import jax.numpy as jnp
 import sympy as sp
-import itertools
-from optimiser import Optimiser
-import concurrent.futures
+from edts.optimiser import Optimiser
+
 
 class EDTS:
     """
-        EDTS (Equation Discovery for Time Series) is a framework for discovering equations
-        that describe the relationships between features in time series data.
+    EDTS (Equation Discovery for Time Series) is a framework for
+    discovering equations.
     """
+
     def __init__(
-            self,
-            data: pd.DataFrame,
-            feature_names: list[str],
-            building_blocks: list[str],
-            iterations: int = 100,
-        ):
+        self,
+        data: pd.DataFrame,
+        feature_names: list[str],
+        building_blocks: list[str],
+        iterations: int = 100,
+    ):
         self.feature_names = feature_names
-        self.logger = logging.getLogger('edc')
+        self.logger = logging.getLogger("edc")
         self.n_cores = 5
         self.optimiser = Optimiser(
-            var_values={name: data[name].values for name in feature_names},
-            y=data['target'].values,
-            lr=5e-2,
+            var_values={
+                name: jnp.asarray(data[name].values)
+                for name in feature_names
+            },
+            target_values=jnp.asarray(data["target"].values),
+            lr=0.05,
         )
+        self.best_equation = None
         self.best_loss = np.inf
+        self.equation_counter = 0
+        self.total_equations = 0
         self.iterations = iterations
         self._expand_building_blocks(building_blocks, len(feature_names))
 
@@ -50,19 +60,29 @@ class EDTS:
 
         expanded_building_blocks = []
         for bb in building_blocks:
-            expanded_building_blocks.extend(_expand_building_block(bb, num_features))
+            expanded_building_blocks.extend(
+                _expand_building_block(bb, num_features)
+            )
 
-        self.logger.info(f"Number of expanded building blocks: {len(expanded_building_blocks)}")
+        self.logger.info(
+            "Number of expanded building blocks: %d",
+            len(expanded_building_blocks)
+        )
         self.building_blocks = expanded_building_blocks
 
     def _get_loss_and_config(self, equation, parallel=False):
-        potential_equation_expanded = sp.Matrix(equation).T * sp.Matrix(self.building_blocks)
+        potential_equation_expanded = sp.Matrix(equation).T * sp.Matrix(
+            self.building_blocks
+        )
         equation_sympy = potential_equation_expanded[0]
-        equation_sympy = sp.sympify(self._replace_constants(str(equation_sympy)))
+        equation_str = self._replace_constants(str(equation_sympy))
+        equation_sympy = sp.sympify(equation_str)
 
         loss, config = self.optimiser.optimise(equation_sympy, self.iterations)
         equation_with_constants = equation_sympy.subs(config)
-        self.logger.debug(f"Equation: {equation_with_constants}, Loss: {loss}")
+        self.logger.debug(
+            "Equation: %s, Loss: %s", str(equation_with_constants), loss
+        )
 
         if parallel:
             return loss, equation_with_constants
@@ -71,7 +91,11 @@ class EDTS:
             self.best_loss = loss
             self.best_equation = equation_with_constants
         if (self.equation_counter % 10) == 0:
-            self.logger.info(f"Best loss at iteration {self.equation_counter}: {self.best_loss}")
+            self.logger.info(
+                "Best loss at iteration %d: %s",
+                self.equation_counter,
+                self.best_loss,
+            )
 
         self.equation_counter += 1
         return loss, config
@@ -80,7 +104,9 @@ class EDTS:
         # Setup the pool of workers
         self.equation_counter = 0
         self.total_equations = len(equations)
-        executer = concurrent.futures.ProcessPoolExecutor(max_workers=self.n_cores)
+        executer = concurrent.futures.ProcessPoolExecutor(
+            max_workers=self.n_cores
+        )
         futures = []
         results = []
 
@@ -92,13 +118,22 @@ class EDTS:
                 self.best_equation = equation
             self.equation_counter += 1
             if (self.equation_counter % 10) == 0:
-                self.logger.info(f"Best loss at iteration {self.equation_counter}/{self.total_equations}: {self.best_loss}")
+                self.logger.info(
+                    "Best loss at iteration %d/%d: %s",
+                    self.equation_counter,
+                    self.total_equations,
+                    self.best_loss
+                )
 
         for equation in equations:
-            f = executer.submit(self._get_loss_and_config, equation, parallel=True)
+            f = executer.submit(
+                self._get_loss_and_config,
+                equation,
+                parallel=True
+            )
             f.add_done_callback(done_callback)
             futures.append(f)
-        
+
         concurrent.futures.wait(futures)
         for f in futures:
             results.append(f.result())
@@ -108,81 +143,50 @@ class EDTS:
     def _replace_constants(self, equation: str):
         constants_counter = 0
         while equation.count("c_"):
-            equation = equation.replace(
-                "c_", f"c{constants_counter}", 1
-            )
+            equation = equation.replace("c_", f"c{constants_counter}", 1)
             constants_counter += 1
         return equation
 
     def beam_search(self, beam_width, max_depth):
+        """Performs a beam serch to find the best equation."""
         n_blocks = len(self.building_blocks)
-        B = np.identity(n_blocks, dtype=np.uint8)
-        I = np.identity(n_blocks, dtype=np.uint8)
+        b_matrix = np.identity(n_blocks, dtype=np.uint8)
+        i_matrix = np.identity(n_blocks, dtype=np.uint8)
 
         for depth in range(min(n_blocks, max_depth)):
-            if B.shape[0] == 0:
+            if b_matrix.shape[0] == 0:
                 break
 
-            losses_and_configs = self._get_losses_and_configs_parallel(B)
-            losses = [loss for loss, _ in losses_and_configs] 
+            losses_and_configs = self._get_losses_and_configs_parallel(
+                b_matrix
+            )
+            losses = [loss for loss, _ in losses_and_configs]
 
             relevant_losses = np.argsort(losses)[:beam_width]
-            self.logger.info(f"Best loss at depth {depth}: {losses[relevant_losses[0]]}")
+            self.logger.info(
+                "Best loss at depth %d: %s", depth, losses[relevant_losses[0]]
+            )
 
             beam_matrixes = []
             for current_loss in relevant_losses:
-                current_loss_row = B[current_loss, :]
+                current_loss_row = b_matrix[current_loss, :]
                 current_loss_indexes = np.where(current_loss_row == 1)[0]
 
                 # create a matrix of the current loss row
-                current_loss_matrix = np.array([current_loss_row]*I.shape[0]).reshape(I.shape)
+                current_loss_matrix = np.array(
+                    [current_loss_row] * i_matrix.shape[0]
+                ).reshape(i_matrix.shape)
 
                 # Multiply with the identity matrix
-                current_loss_matrix = current_loss_matrix | I
+                current_loss_matrix = current_loss_matrix | i_matrix
 
                 # Remove the current loss rows
-                current_loss_matrix_clean = np.delete(current_loss_matrix, current_loss_indexes, 0)
+                current_loss_matrix_clean = np.delete(
+                    current_loss_matrix, current_loss_indexes, 0
+                )
 
                 # Add the current beam matrix
                 beam_matrixes.append(current_loss_matrix_clean)
 
-            B = np.vstack(beam_matrixes)
-            B = np.unique(B, axis=0)
-        
-
-    
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    # Create a sythetic dataset with features x1, x2, x3, x4 and target y
-    x1 = np.sin(np.linspace(0, 100, 1000)) + np.random.normal(0, 0.1, 1000)
-    x2 = np.linspace(0, 10, 1000) + np.random.normal(0, 0.1, 1000)
-    x3 = np.random.normal(0, 1, 1000).cumsum() + np.random.normal(0, 0.1, 1000)
-    x4 = (np.sin(np.linspace(0, 50, 1000)) + np.random.normal(0, 0.1, 1000)) * 2
-
-    y = 2 * x1 + 0.5 * x2 - 0.3 * x3 + np.sin(x4)
-
-    data = pd.DataFrame({
-        'x0': x1,
-        'x1': x2,
-        'x2': x3,
-        'x3': x4,
-        'target': y
-    })
-
-    edts = EDTS(
-        data=data,
-        feature_names=["x0", "x1", "x2", "x3"],
-        building_blocks=[
-            "c_*x_",
-            "c_*x_*x_",
-            # "c_*x_**2",
-            "c_*sin(x_)"
-        ],
-        iterations=1000,
-    )
-
-    edts.beam_search(beam_width=10000, max_depth=4)
-
-    print(edts.best_equation)
+            b_matrix = np.vstack(beam_matrixes)
+            b_matrix = np.unique(b_matrix, axis=0)
