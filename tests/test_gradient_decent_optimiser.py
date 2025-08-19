@@ -4,7 +4,10 @@ from edts.optimiser import Optimiser
 
 
 def test_gradient_descent_optimiser_simple_quadratic():
-    # Minimize f(x) = (x-3)^2, minimum at x=3
+    """
+    Test the gradient descent optimiser on a simple quadratic equation.
+    This should find the minimum at c0 = 5.0.
+    """
     def f(x):
         return 25 + (x - 3) + (x - 5) ** 2
 
