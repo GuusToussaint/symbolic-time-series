@@ -31,7 +31,7 @@ class EDTS:
                 for name in feature_names
             },
             target_values=jnp.asarray(data["target"].values),
-            lr=5e-2,
+            lr=0.05,
         )
         self.best_equation = None
         self.best_loss = np.inf
@@ -174,7 +174,7 @@ class EDTS:
 
                 # create a matrix of the current loss row
                 current_loss_matrix = np.array(
-                    [current_loss_row] * b_matrix.shape[0]
+                    [current_loss_row] * i_matrix.shape[0]
                 ).reshape(i_matrix.shape)
 
                 # Multiply with the identity matrix

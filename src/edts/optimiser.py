@@ -180,8 +180,6 @@ class Optimiser:
                 g = g * (max_norm / grad_norm)
             params = params - lr * g
 
-            print(params)
-
             current_loss = objective_jit(params)
             if current_loss < best_loss:
                 best_loss = current_loss
