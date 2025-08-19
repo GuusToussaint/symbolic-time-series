@@ -250,7 +250,7 @@ $$
 
 A potential equation could be:
 $$
-f(X_t) = 0.7 \cdot X_{f}^4 + 0.1 \cdot X_{f}^5 + 10
+f(X_t) = 0.7 \cdot X_{t}^4 + 0.1 \cdot X_{t}^5 + 10
 $$
 $$
 f(X_t) = 0.7 \cdot 200^4 + 0.1 \cdot 140^5 + 10
